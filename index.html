@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PC Checker for Rainbow Six Siege by Zeywya</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#0b0b0b;
+    --purple:#8a2be2;
+    --neon-green:#00ff88;
+    --muted:#1b1b1b;
+    --glass: rgba(255,255,255,0.04);
+  }
+  html,body{height:100%;margin:0;font-family:Inter, Arial, sans-serif;background:#000;color:#e9e9ee}
+  .matrix-bg{
+    position:fixed;inset:0;z-index:0;overflow:hidden;
+    background: radial-gradient(ellipse at 10% 10%, rgba(138,43,226,0.08), transparent 8%),
+                radial-gradient(ellipse at 90% 90%, rgba(0,255,136,0.04), transparent 10%), var(--bg1);
+  }
+  canvas#matrixCanvas{position:absolute;inset:0;display:block;opacity:0.55;mix-blend-mode:screen}
+  .wrap{position:relative;z-index:2;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:48px}
+  .card{
+    width:980px;max-width:96%;border-radius:12px;padding:28px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.3));
+    box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 60px rgba(138,43,226,0.06);
+    display:grid;grid-template-columns:1fr 420px;gap:20px;backdrop-filter: blur(6px);border:1px solid rgba(138,43,226,0.12)
+  }
+  .terminal{
+    background:linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.5));
+    border-radius:8px;padding:18px;color:var(--neon-green);font-family:"Share Tech Mono", monospace;font-size:13px;min-height:320px;
+    box-shadow: inset 0 0 40px rgba(0,255,136,0.02);
+    overflow:auto;
+  }
+  .term-header{display:flex;gap:10px;align-items:center;margin-bottom:12px}
+  .led{width:12px;height:12px;border-radius:50%}
+  .led.p{background:var(--purple)}.led.g{background:var(--neon-green)}.led.r{background:#ff416c}
+  .title{flex:1;color:rgba(255,255,255,0.85);font-weight:700;font-size:15px}
+  .sub{color:rgba(255,255,255,0.45);font-size:12px}
+  .log{line-height:1.55;white-space:pre-wrap}
+  .highlight{color:var(--purple);font-weight:700}
+  .panel{
+    padding:18px;border-radius:8px;background:linear-gradient(180deg,rgba(10,10,10,0.4),rgba(0,0,0,0.6));
+    border:1px solid rgba(0,255,136,0.06);display:flex;flex-direction:column;gap:12px;align-items:stretch;
+  }
+  .brand{font-family:"Share Tech Mono",monospace;color:var(--purple);font-weight:800;font-size:16px;letter-spacing:1px}
+  .headline{color:#fff;font-weight:800;font-size:18px}
+  .blurb{color:rgba(255,255,255,0.62);font-size:13px}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .stat{flex:1;min-width:120px;background:linear-gradient(90deg, rgba(255,255,255,0.02), transparent);padding:10px;border-radius:8px;border:1px solid rgba(138,43,226,0.06)}
+  .stat .num{color:var(--neon-green);font-weight:800;font-size:18px}
+  .btn-download{
+    display:inline-flex;align-items:center;justify-content:center;padding:14px 18px;border-radius:10px;background:linear-gradient(90deg,var(--neon-green),#7cffb3);
+    color:#001; font-weight:800;text-decoration:none;border:0;cursor:pointer;box-shadow:0 6px 30px rgba(0,255,136,0.12);
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .btn-download:active{transform:translateY(1px)}
+  .center-screen{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:8px}
+  .controls{display:flex;flex-direction:column;gap:8px}
+  .small{font-size:12px;color:rgba(255,255,255,0.45)}
+  .progress{
+    height:10px;border-radius:999px;background:linear-gradient(90deg,#000,#111);overflow:hidden;border:1px solid rgba(255,255,255,0.03)
+  }
+  .progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,rgba(138,43,226,0.9),rgba(0,255,136,0.85));transition:width 600ms cubic-bezier(.2,.9,.2,1)}
+  .about{
+    margin-top:10px;padding:12px;border-radius:8px;background:linear-gradient(90deg,rgba(138,43,226,0.03),transparent);border:1px solid rgba(138,43,226,0.06);
+    color:rgba(255,255,255,0.8);font-size:13px;
+  }
+  .about .label{font-weight:800;color:var(--purple);margin-bottom:8px;display:block}
+  .footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px;color:rgba(255,255,255,0.35);font-size:12px}
+  @media (max-width:880px){
+    .card{grid-template-columns:1fr; padding:18px}
+    .panel{order:2}
+  }
+</style>
+</head>
+<body>
+<div class="matrix-bg" aria-hidden="true">
+  <canvas id="matrixCanvas"></canvas>
+</div>
+
+<div class="wrap">
+  <div class="card" role="main" aria-label="PC Checker main panel">
+    <div class="terminal" id="terminal" aria-live="polite">
+      <div class="term-header">
+        <div class="led p" title="status"></div>
+        <div class="led g"></div>
+        <div class="led r"></div>
+        <div class="title">pc-checker.zeywya.local</div>
+        <div class="sub">Realtime up-to-date terminal</div>
+      </div>
+      <div class="log" id="log">
+        Initializing PC Checker engine for cheat detection...
+      </div>
+    </div>
+
+    <aside class="panel" aria-label="Controls and download">
+      <div>
+        <div class="brand">Rainbow 6 Siege PC CHECKER</div>
+        <div class="headline">by Zeywya</div>
+        <div class="blurb">The most accurate PC checker tool out there for identifying cheat-related files and configurations. Use the tool to run a full scan and protect your competitive integrity.</div>
+      </div>
+
+      <div class="stats" aria-hidden="false">
+        <div class="stat">
+          <div class="small">Accuracy</div>
+          <div class="num" id="acc">99.7%</div>
+        </div>
+        <div class="stat">
+          <div class="small">Checks</div>
+          <div class="num" id="checks">643</div>
+        </div>
+        <div class="stat">
+          <div class="small">Last update</div>
+          <div class="num" id="updated">2025-10-17</div>
+        </div>
+      </div>
+
+      <div class="center-screen">
+        <a class="btn-download" id="downloadBtn" href="ZeywyaR6Checker.zip" download="ZeywyaR6Checker.zip" title="Download PC Checker">
+          DOWNLOAD PC CHECKER
+        </a>
+      </div>
+
+      <div class="controls" aria-hidden="false">
+        <div class="small">Quick actions</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-download" id="verifyBtn" style="background:transparent;border:1px solid rgba(138,43,226,0.18);color:var(--purple)">VERIFY</button>
+        </div>
+
+        <div style="margin-top:8px">
+          <div class="small">Operation progress</div>
+          <div class="progress" aria-hidden="false"><i id="bar"></i></div>
+        </div>
+      </div>
+
+      <div class="about" id="aboutCreator" aria-label="About the creator">
+        <span class="label">About the creator</span>
+        <div>Hello! I'm Zeywya. I'm a college student studying to be a software engineer. I build tools and experiments focused on game integrity and anti-cheat research while I learn software engineering professionally.</div>
+      </div>
+
+      <div class="footer">
+        <div>by <strong style="color:var(--neon-green)">Zeywya</strong></div>
+        <div class="small">Claim: Most accurate PC checker for cheat detection</div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+/* Matrix background effect */
+const canvas = document.getElementById('matrixCanvas');
+const ctx = canvas.getContext('2d');
+let cols, rows, fontSize = 14, drops;
+function resizeCanvas(){
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+  cols = Math.floor(canvas.width / fontSize);
+  rows = Math.floor(canvas.height / fontSize);
+  drops = new Array(cols).fill(1).map(()=>Math.random()*rows|0);
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+const chars = "01<>\\/[]{}()@#%$*+=-:;".split('');
+function draw(){
+  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.font = fontSize + "px 'Share Tech Mono', monospace";
+  for(let i=0;i<cols;i++){
+    const text = chars[Math.floor(Math.random()*chars.length)];
+    const x = i*fontSize;
+    const y = drops[i]*fontSize;
+    ctx.fillStyle = i%6===0 ? "rgba(138,43,226,0.9)" : "rgba(0,255,136," + (0.25+Math.random()*0.75) + ")";
+    ctx.fillText(text, x, y);
+    if(y > canvas.height && Math.random() > 0.975) drops[i]=0;
+    drops[i]++;
+  }
+  requestAnimationFrame(draw);
+}
+draw();
+
+
+const log = document.getElementById('log');
+const bar = document.getElementById('bar');
+const acc = document.getElementById('acc');
+const checksEl = document.getElementById('checks');
+let runningVerify = false;
+
+
+function appendLine(text){
+  const now = new Date().toLocaleTimeString();
+  log.textContent += `\n[${now}] ${text}`;
+  log.scrollTop = log.scrollHeight;
+}
+
+
+document.getElementById('verifyBtn').addEventListener('click', ()=>{
+  if(runningVerify) return;
+  runningVerify = true;
+  appendLine("Querying update server...");
+  bar.style.width = "10%";
+  setTimeout(()=>{
+    bar.style.width = "60%";
+    appendLine("Checking local verifier signature...");
+  }, 700);
+  setTimeout(()=>{
+    bar.style.width = "100%";
+    appendLine("Checker is up to date. Signature verified. No update required.");
+    runningVerify = false;
+    setTimeout(()=> { bar.style.width = "0%"; }, 800);
+  }, 1500 + Math.random()*800);
+});
+
+
+let checks = 643;
+function updateChecksDisplay(){
+  checksEl.textContent = checks;
+}
+updateChecksDisplay();
+
+function scheduleNextIncrement(){
+  const minMs = 3 * 60 * 1000; // 3 minutes
+  const maxMs = 10 * 60 * 1000; // 10 minutes
+  const wait = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+  setTimeout(()=>{
+    checks += 1;
+    updateChecksDisplay();
+    appendLine("Remote checks tally incremented");
+    scheduleNextIncrement();
+  }, wait);
+}
+scheduleNextIncrement();
+
+
+setInterval(()=> {
+  const leds = document.querySelectorAll('.led');
+  leds.forEach((l,i)=> l.style.opacity = 0.7 + Math.random()*0.3);
+}, 300);
+
+
+document.addEventListener('keyup', e=>{
+  if(e.key === 'd' || e.key === 'D') {
+    document.getElementById('downloadBtn').click();
+  }
+});
+</script>
+</body>
+</html>
